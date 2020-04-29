@@ -1,5 +1,5 @@
-import { combineLatest, concat, fromEvent, merge, of } from 'rxjs';
-import { map, mapTo, scan, startWith, switchMap, tap } from 'rxjs/operators';
+import { combineLatest, concat, fromEvent, merge, Observable, of } from 'rxjs';
+import { flatMap, map, mapTo, scan, startWith, switchMap, tap } from 'rxjs/operators';
 
 const prevButton = document.querySelector<HTMLButtonElement>('#prev');
 const nextButton = document.querySelector<HTMLButtonElement>('#next');
@@ -20,18 +20,23 @@ const category$ = fromEvent<HTMLElementEventMap['change']>(categorySelector, 'ch
 
     return null;
   }),
-  startWith(of(categorySelector.value))
+  startWith(categorySelector.value)
 );
 
-const position$ = category$.pipe(
-  switchMap((category: string) => merge(prev$, next$).pipe(
-      scan(((acc, value: number) => {
-        const sum = acc + value;
-        return sum < 0 ? 0 : sum;
-      }), 0),
-      startWith(0)
-    )
-  ));
-position$.subscribe(console.log)
+const position$ = merge(prev$, next$).pipe(
+    scan(((acc, value: number) => {
+      const sum = acc + value;
+      return sum < 0 ? 0 : sum;
+    }), 0),
+    startWith(0)
+  );
+
+const imageSelect$ = category$.pipe(
+  switchMap((category) => position$.pipe(
+    map((index: number) => ({category, index}))
+  ))
+);
+
+imageSelect$.subscribe(console.log)
 
 
