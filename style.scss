@@ -1,6 +1,18 @@
+@keyframes color-pulse {
+  from {
+    color: magenta;
+  }
+  50% {
+    color: dodgerblue;
+  }
+  to {
+    color: magenta;
+  }
+}
+
 html {
   font-family: sans-serif;
-  font-size: 52px;
+  font-size: 60px;
 }
 
 body {
@@ -12,12 +24,12 @@ h1, nav, main {
 }
 
 h1 {
-  color: dodgerblue;
   text-shadow:
     5px 5px 0 #333,
     8px 8px 0 mediumturquoise,
     10px 10px 0 moccasin,
     12px 12px 0 mediumspringgreen;
+  animation: color-pulse 10s infinite ease;
 
 }
 
@@ -34,6 +46,7 @@ nav {
   border: 6px solid dodgerblue;
   border-radius: 12px;
   background: unset;
+  transition: color .3s, background-color .3s;
 
   &:active {
     color: #333333;
