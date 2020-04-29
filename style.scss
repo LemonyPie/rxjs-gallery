@@ -10,6 +10,33 @@
   }
 }
 
+@keyframes shadow-pulse {
+  from {
+    text-shadow:
+      5px 5px 0 #333,
+      8px 8px 0 mediumturquoise,
+      10px 10px 0 moccasin,
+      12px 12px 0 mediumspringgreen,
+      12px 12px 10px magenta;
+  }
+  50% {
+    text-shadow:
+      5px 5px 0 #333,
+      8px 6px 0 mediumturquoise,
+      10px 8px 0 moccasin,
+      12px 10px 0 mediumspringgreen,
+      12px 10px 10px dodgerblue;
+  }
+  to {
+    text-shadow:
+      5px 5px 0 #333,
+      8px 8px 0 mediumturquoise,
+      10px 10px 0 moccasin,
+      12px 12px 0 mediumspringgreen,
+      12px 12px 10px magenta;
+  }
+}
+
 html {
   font-family: sans-serif;
   font-size: 60px;
@@ -24,13 +51,7 @@ h1, nav, main {
 }
 
 h1 {
-  text-shadow:
-    5px 5px 0 #333,
-    8px 8px 0 mediumturquoise,
-    10px 10px 0 moccasin,
-    12px 12px 0 mediumspringgreen;
-  animation: color-pulse 10s infinite ease;
-
+  animation: color-pulse 10s infinite ease, shadow-pulse 10s infinite ease;
 }
 
 nav {
@@ -46,12 +67,26 @@ nav {
   border: 6px solid dodgerblue;
   border-radius: 12px;
   background: unset;
-  transition: color .3s, background-color .3s;
+  transition: color .3s, background-color .3s, box-shadow .6s;
+  box-shadow: 0 5px 20px 0 rgba(30, 144, 255, .5);;
+  outline: none;
 
   &:active {
     color: #333333;
     background: dodgerblue;
+    box-shadow: 0 5px 20px 0 rgba(30, 144, 255, 1);;
   }
+
+  &:focus {
+    border-color: magenta;
+    box-shadow: 0 5px 20px 0 rgba(255, 0, 255, .5);;
+
+    &:active {
+      background-color: magenta;
+      box-shadow: 0 5px 20px 0 rgba(255, 0, 255, 1);;
+    }
+  }
+
 }
 
 .category-select {
@@ -64,6 +99,11 @@ nav {
     width: 100%;
     margin-top: 20px;
     font-size: 16px;
+    outline: none;
+
+    &:focus {
+      box-shadow: 0 5px 20px 0 rgba(255, 0, 255, .5);;
+    }
   }
 }
 
