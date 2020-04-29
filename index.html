@@ -1,15 +1,30 @@
-<h1>RxJS image gallery</h1>
-<img id="image" alt="image" src="">
-<nav>
-    <button id="prev">Prev</button>
-    <label>
-        Category
-        <select id="category">
-            <option value="sports">Sports</option>
-            <option value="technics">Technics</option>
-            <option value="nature">Nature</option>
-        </select>
-    </label>
-    <button id="next">Next</button>
-</nav>
-<script src="index.ts"></script>
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.scss">
+</head>
+<body>
+    <h1>RxJS image gallery</h1>
+    <nav>
+        <button id="prev">Prev</button>
+        <label class="category-select">
+            Category
+            <select id="category">
+                <option value="sports">Sports</option>
+                <option value="technics">Technics</option>
+                <option value="nature">Nature</option>
+            </select>
+        </label>
+        <button id="next">Next</button>
+    </nav>
+
+    <main id="content"></main>
+
+    <script src="index.ts"></script>
+</body>
+</html>

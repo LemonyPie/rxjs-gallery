@@ -1,0 +1,56 @@
+html {
+  font-family: sans-serif;
+  font-size: 52px;
+}
+
+body {
+  background: #333;
+}
+
+h1, nav, main {
+  text-align: center;
+}
+
+h1 {
+  color: dodgerblue;
+  text-shadow:
+    5px 5px 0 #333,
+    8px 8px 0 mediumturquoise,
+    10px 10px 0 moccasin,
+    12px 12px 0 mediumspringgreen;
+
+}
+
+nav {
+  display: flex;
+  justify-content: center;
+}
+
+#prev,
+#next {
+  padding: 8px 16px;
+  color: aliceblue;
+  font-size: 16px;
+  border: 6px solid dodgerblue;
+  border-radius: 12px;
+  background: unset;
+
+  &:active {
+    color: #333333;
+    background: dodgerblue;
+  }
+}
+
+.category-select {
+  font-size: 26px;
+  color: aliceblue;
+  margin: 0 50px;
+
+  select {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    font-size: 16px;
+  }
+}
+
