@@ -18,7 +18,7 @@ const setLoading = (status: boolean): void => {
 }
 
 const setContent = (content: HTMLElement): void => {
-  contentEl.append(content);
+  contentEl.prepend(content);
 }
 
 const prev$ = fromEvent(prevButton, 'click').pipe(
