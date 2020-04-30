@@ -1,4 +1,4 @@
-import { combineLatest, concat, EMPTY, fromEvent, merge, Observable, of } from 'rxjs';
+import { combineLatest, concat, defer, EMPTY, fromEvent, merge, Observable, of } from 'rxjs';
 import { catchError, finalize, flatMap, map, mapTo, scan, startWith, switchMap, tap } from 'rxjs/operators';
 import { URL } from './const';
 
@@ -54,7 +54,6 @@ const imageSelect$ = category$.pipe(
 );
 
 imageSelect$.pipe(
-  tap(console.log),
   tap(() => setLoading(true)),
   switchMap((selectedImage: ISelectedImage) => new Observable((subscriber) => {
     const image = new Image()
@@ -71,11 +70,12 @@ imageSelect$.pipe(
       })
     };
 
-    image.src = `${URL}/${selectedImage.category}/`;
+    image.src = `${URL}/${selectedImage.category}?index=${selectedImage.index}/`;
 
     return () => {
-      // TODO: allow to cancel image loading
-      // image.src = '';
+      if(!image.complete) { image.src = ''; }
+      image.onload = undefined;
+      image.onerror = undefined;
     }
   }).pipe(
     finalize(() => {
@@ -84,7 +84,6 @@ imageSelect$.pipe(
   )),
   catchError( () => EMPTY),
 ).subscribe((image: HTMLImageElement) => {
-  console.debug(image)
   setContent(image);
 })
 
