@@ -77,11 +77,8 @@ imageSelect$.pipe(
       image.onload = undefined;
       image.onerror = undefined;
     }
-  }).pipe(
-    finalize(() => {
-      setLoading(false);
-    })
-  )),
+  })),
+  tap(() => setLoading(false)),
   catchError( () => EMPTY),
 ).subscribe((image: HTMLImageElement) => {
   setContent(image);
