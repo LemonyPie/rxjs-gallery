@@ -1,9 +1,25 @@
-import { combineLatest, concat, fromEvent, merge, Observable, of } from 'rxjs';
-import { flatMap, map, mapTo, scan, startWith, switchMap, tap } from 'rxjs/operators';
+import { combineLatest, concat, EMPTY, fromEvent, merge, Observable, of } from 'rxjs';
+import { catchError, finalize, flatMap, map, mapTo, scan, startWith, switchMap, tap } from 'rxjs/operators';
+import { URL } from './const';
+
+interface ISelectedImage {
+  category: string;
+  index: number;
+}
 
 const prevButton = document.querySelector<HTMLButtonElement>('#prev');
 const nextButton = document.querySelector<HTMLButtonElement>('#next');
 const categorySelector = document.querySelector<HTMLSelectElement>('#category');
+const loadingEl = document.querySelector<HTMLDivElement>('#loading');
+const contentEl = document.querySelector<HTMLDivElement>('#content');
+
+const setLoading = (status: boolean): void => {
+  status ? loadingEl.style.display = 'block' : loadingEl.style.display = 'none';
+}
+
+const setContent = (content: HTMLElement): void => {
+  contentEl.append(content);
+}
 
 const prev$ = fromEvent(prevButton, 'click').pipe(
   mapTo(-1)
@@ -33,10 +49,43 @@ const position$ = merge(prev$, next$).pipe(
 
 const imageSelect$ = category$.pipe(
   switchMap((category) => position$.pipe(
-    map((index: number) => ({category, index}))
+    map((index: number): ISelectedImage => ({category, index}))
   ))
 );
 
-imageSelect$.subscribe(console.log)
+imageSelect$.pipe(
+  tap(console.log),
+  tap(() => setLoading(true)),
+  switchMap((selectedImage: ISelectedImage) => new Observable((subscriber) => {
+    const image = new Image()
+
+    image.onload = () => {
+      subscriber.next(image)
+      subscriber.complete();
+    };
+
+    image.onerror = (error) => {
+      subscriber.error( {
+        message: 'Failed to load image',
+        error
+      })
+    };
+
+    image.src = `${URL}/${selectedImage.category}/`;
+
+    return () => {
+      // TODO: allow to cancel image loading
+      // image.src = '';
+    }
+  }).pipe(
+    finalize(() => {
+      setLoading(false);
+    })
+  )),
+  catchError( () => EMPTY),
+).subscribe((image: HTMLImageElement) => {
+  console.debug(image)
+  setContent(image);
+})
 
 
