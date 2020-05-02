@@ -101,6 +101,13 @@ const loadImage = (selectedImage: ISelectedImage): Observable<HTMLImageElement> 
 
 const online$ = fromEvent(window, 'online');
 
+const prefetchMap = (innerObservable, project) => {
+  return (source) => source.pipe(
+    withLatestFrom(innerObservable),
+    switchMap(project)
+  )
+}
+
 const loadAndCacheImages = (prefetch?: number): OperatorFunction<HTMLImageElement> => {
   const cache: Map<string, Map<number, HTMLImageElement>> = new Map();
   return (source: Observable<ISelectedImage>): Observable<HTMLImageElement> => source.pipe(
@@ -126,10 +133,7 @@ const loadAndCacheImages = (prefetch?: number): OperatorFunction<HTMLImageElemen
       );
     }),
     prefetch
-      ? withLatestFrom(source)
-      : identity,
-    prefetch
-      ? switchMap(([image, selectedImage]: [HTMLImageElement, ISelectedImage]) => {
+      ? prefetchMap(source, ([image, selectedImage]: [HTMLImageElement, ISelectedImage]) => {
         const cacheCategory = cache.get(selectedImage.category);
         const prefetchIndex = selectedImage.index + prefetch;
         if(!cacheCategory.has(prefetchIndex)) {
