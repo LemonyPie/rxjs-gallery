@@ -1,4 +1,5 @@
 import {
+  concat,
   EMPTY,
   fromEvent,
   merge,
@@ -7,7 +8,7 @@ import {
   OperatorFunction, timer,
 } from 'rxjs';
 import {
-  catchError,
+  catchError, flatMap,
   map,
   mapTo, retryWhen,
   scan,
@@ -103,24 +104,55 @@ const online$ = fromEvent(window, 'online');
 const loadAndCacheImages = (): OperatorFunction<HTMLImageElement> => {
   const cache: Map<string, Map<number, HTMLImageElement>> = new Map();
   return switchMap((selectedImage: ISelectedImage): Observable<HTMLImageElement> => {
-    const cacheCategory = cache.get(selectedImage.category);
+    let cacheCategory = cache.get(selectedImage.category);
+    const prefetchIndex = selectedImage.index + 1;
     if (cacheCategory) {
       if ( cacheCategory.has( selectedImage.index ) ) {
-        return of( cacheCategory.get( selectedImage.index ) );
+        const cachedImage$ = of( cacheCategory.get( selectedImage.index ) );
+        if (!cacheCategory.has(prefetchIndex)) {
+          return concat(
+            cachedImage$,
+            loadImage({...selectedImage, index: prefetchIndex}).pipe(
+              tap((image: HTMLImageElement) => {
+                cacheCategory.set(prefetchIndex, image);
+              }),
+              flatMap(() => EMPTY),
+              catchError(() => EMPTY)
+            )
+          )
+        }
+
+        return cachedImage$;
       }
     } else {
       cache.set(selectedImage.category, new Map())
+      cacheCategory = cache.get(selectedImage.category);
     }
 
-    return loadImage(selectedImage).pipe(
+    const loadImage$ = loadImage(selectedImage).pipe(
       tap((image: HTMLImageElement) => {
-        cache.get(selectedImage.category).set(selectedImage.index, image);
+        cacheCategory.set(selectedImage.index, image);
       }),
       retryWhen(() => merge(online$, timer(RETRY_DELAY))),
       catchError( () => {
         return EMPTY;
       }),
     );
+
+    if (!cacheCategory.has(prefetchIndex)) {
+      return concat(
+        loadImage$,
+        loadImage({...selectedImage, index: prefetchIndex}).pipe(
+          tap((image: HTMLImageElement) => {
+            cacheCategory.set(prefetchIndex, image);
+          }),
+          flatMap(() => EMPTY),
+          catchError(() => EMPTY)
+        )
+      )
+    }
+
+    return loadImage$;
   })
 }
 
