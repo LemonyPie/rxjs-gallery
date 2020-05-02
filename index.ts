@@ -1,11 +1,11 @@
 import {
-  concat, defer,
-  EMPTY, forkJoin, from,
-  fromEvent, identity, iif,
-  merge, noop,
+  concat,
+  EMPTY,
+  fromEvent, identity,
+  merge,
   Observable,
   of,
-  OperatorFunction, Subject, timer, using,
+  OperatorFunction, timer
 } from 'rxjs';
 import {
   catchError, flatMap,
