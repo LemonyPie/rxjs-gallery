@@ -1,11 +1,11 @@
 import {
-  concat,
-  EMPTY,
-  fromEvent,
-  merge,
+  concat, defer,
+  EMPTY, forkJoin, from,
+  fromEvent, identity, iif,
+  merge, noop,
   Observable,
   of,
-  OperatorFunction, timer,
+  OperatorFunction, Subject, timer, using,
 } from 'rxjs';
 import {
   catchError, flatMap,
@@ -14,7 +14,7 @@ import {
   scan,
   startWith,
   switchMap,
-  tap,
+  tap, withLatestFrom,
 } from 'rxjs/operators';
 import { URL } from './const';
 
@@ -101,65 +101,57 @@ const loadImage = (selectedImage: ISelectedImage): Observable<HTMLImageElement> 
 
 const online$ = fromEvent(window, 'online');
 
-const loadAndCacheImages = (): OperatorFunction<HTMLImageElement> => {
+const loadAndCacheImages = (prefetch?: number): OperatorFunction<HTMLImageElement> => {
   const cache: Map<string, Map<number, HTMLImageElement>> = new Map();
-  return switchMap((selectedImage: ISelectedImage): Observable<HTMLImageElement> => {
-    let cacheCategory = cache.get(selectedImage.category);
-    const prefetchIndex = selectedImage.index + 1;
-    if (cacheCategory) {
-      if ( cacheCategory.has( selectedImage.index ) ) {
-        const cachedImage$ = of( cacheCategory.get( selectedImage.index ) );
-        if (!cacheCategory.has(prefetchIndex)) {
-          return concat(
-            cachedImage$,
-            loadImage({...selectedImage, index: prefetchIndex}).pipe(
-              tap((image: HTMLImageElement) => {
-                cacheCategory.set(prefetchIndex, image);
-              }),
-              flatMap(() => EMPTY),
-              catchError(() => EMPTY)
-            )
-          )
+  return (source: Observable<ISelectedImage>): Observable<HTMLImageElement> => source.pipe(
+    switchMap((selectedImage: ISelectedImage): Observable<HTMLImageElement> => {
+      let cacheCategory = cache.get(selectedImage.category);
+      if (cacheCategory) {
+        if ( cacheCategory.has( selectedImage.index ) ) {
+          return of( cacheCategory.get( selectedImage.index ) );
+        }
+      } else {
+        cache.set(selectedImage.category, new Map())
+        cacheCategory = cache.get(selectedImage.category);
+      }
+
+      return loadImage(selectedImage).pipe(
+        tap((image: HTMLImageElement) => {
+          cacheCategory.set(selectedImage.index, image);
+        }),
+        retryWhen(() => merge(online$, timer(RETRY_DELAY))),
+        catchError( () => {
+          return EMPTY;
+        }),
+      );
+    }),
+    prefetch
+      ? withLatestFrom(source)
+      : identity,
+    prefetch
+      ? switchMap(([image, selectedImage]: [HTMLImageElement, ISelectedImage]) => {
+        const cacheCategory = cache.get(selectedImage.category);
+        const prefetchIndex = selectedImage.index + prefetch;
+        if(!cacheCategory.has(prefetchIndex)) {
+          return concat(of(image), loadImage({...selectedImage, index: prefetchIndex}).pipe(
+            tap((image: HTMLImageElement) => {
+              cacheCategory.set(prefetchIndex, image)
+            }),
+            flatMap(() => EMPTY),
+            catchError(() => EMPTY)
+          ));
         }
 
-        return cachedImage$;
-      }
-    } else {
-      cache.set(selectedImage.category, new Map())
-      cacheCategory = cache.get(selectedImage.category);
-    }
-
-    const loadImage$ = loadImage(selectedImage).pipe(
-      tap((image: HTMLImageElement) => {
-        cacheCategory.set(selectedImage.index, image);
-      }),
-      retryWhen(() => merge(online$, timer(RETRY_DELAY))),
-      catchError( () => {
         return EMPTY;
-      }),
-    );
-
-    if (!cacheCategory.has(prefetchIndex)) {
-      return concat(
-        loadImage$,
-        loadImage({...selectedImage, index: prefetchIndex}).pipe(
-          tap((image: HTMLImageElement) => {
-            cacheCategory.set(prefetchIndex, image);
-          }),
-          flatMap(() => EMPTY),
-          catchError(() => EMPTY)
-        )
-      )
-    }
-
-    return loadImage$;
-  })
+      })
+      : identity
+  );
 }
 
 imageSelect$.pipe(
   tap(() => clearContent()),
   tap(() => setLoading(true)),
-  loadAndCacheImages(),
+  loadAndCacheImages(1),
   tap(() => setLoading(false))
 ).subscribe({
   next: (image: HTMLImageElement) => setContent( image ),
