@@ -1,23 +1,16 @@
 import {
-  combineLatest,
-  concat,
-  defer,
   EMPTY,
   fromEvent,
   merge,
-  MonoTypeOperatorFunction, NEVER,
   Observable,
   of,
-  OperatorFunction, Subject, throwError,
+  OperatorFunction, timer,
 } from 'rxjs';
 import {
   catchError,
-  finalize,
-  flatMap, last,
   map,
-  mapTo, retry, retryWhen,
+  mapTo, retryWhen,
   scan,
-  shareReplay,
   startWith,
   switchMap,
   tap,
@@ -28,6 +21,8 @@ interface ISelectedImage {
   category: string;
   index: number;
 }
+
+const RETRY_DELAY = 2000;
 
 const prevButton = document.querySelector<HTMLButtonElement>('#prev');
 const nextButton = document.querySelector<HTMLButtonElement>('#next');
@@ -105,7 +100,7 @@ const loadImage = (selectedImage: ISelectedImage): Observable<HTMLImageElement> 
 
 const online$ = fromEvent(window, 'online');
 
-const cacheImages = (): OperatorFunction<HTMLImageElement> => {
+const loadAndCacheImages = (): OperatorFunction<HTMLImageElement> => {
   const cache: Map<string, Map<number, HTMLImageElement>> = new Map();
   return switchMap((selectedImage: ISelectedImage): Observable<HTMLImageElement> => {
     const cacheCategory = cache.get(selectedImage.category);
@@ -120,7 +115,11 @@ const cacheImages = (): OperatorFunction<HTMLImageElement> => {
     return loadImage(selectedImage).pipe(
       tap((image: HTMLImageElement) => {
         cache.get(selectedImage.category).set(selectedImage.index, image);
-      })
+      }),
+      retryWhen(() => merge(online$, timer(RETRY_DELAY))),
+      catchError( () => {
+        return EMPTY;
+      }),
     );
   })
 }
@@ -128,14 +127,11 @@ const cacheImages = (): OperatorFunction<HTMLImageElement> => {
 imageSelect$.pipe(
   tap(() => clearContent()),
   tap(() => setLoading(true)),
-  cacheImages(),
-  tap(() => setLoading(false)),
-  catchError( (err, observable) => {
-    return EMPTY;
-  }),
+  loadAndCacheImages(),
+  tap(() => setLoading(false))
 ).subscribe({
   next: (image: HTMLImageElement) => setContent( image ),
-  error: err => console.error(err),
+  error: err => console.error('error', err),
   complete: () => console.log('complete')
 })
 
