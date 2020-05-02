@@ -1,5 +1,27 @@
-import { combineLatest, concat, defer, EMPTY, fromEvent, merge, Observable, of } from 'rxjs';
-import { catchError, finalize, flatMap, map, mapTo, scan, startWith, switchMap, tap } from 'rxjs/operators';
+import {
+  combineLatest,
+  concat,
+  defer,
+  EMPTY,
+  fromEvent,
+  merge,
+  MonoTypeOperatorFunction, NEVER,
+  Observable,
+  of,
+  OperatorFunction, Subject, throwError,
+} from 'rxjs';
+import {
+  catchError,
+  finalize,
+  flatMap, last,
+  map,
+  mapTo, retry, retryWhen,
+  scan,
+  shareReplay,
+  startWith,
+  switchMap,
+  tap,
+} from 'rxjs/operators';
 import { URL } from './const';
 
 interface ISelectedImage {
@@ -19,6 +41,10 @@ const setLoading = (status: boolean): void => {
 
 const setContent = (content: HTMLElement): void => {
   contentEl.prepend(content);
+}
+
+const clearContent = (): void => {
+  contentEl.innerHTML = '';
 }
 
 const prev$ = fromEvent(prevButton, 'click').pipe(
@@ -53,35 +79,64 @@ const imageSelect$ = category$.pipe(
   ))
 );
 
-imageSelect$.pipe(
-  tap(() => setLoading(true)),
-  switchMap((selectedImage: ISelectedImage) => new Observable((subscriber) => {
-    const image = new Image()
+const loadImage = (selectedImage: ISelectedImage): Observable<HTMLImageElement> => new Observable((subscriber) => {
+  const image = new Image()
 
-    image.onload = () => {
-      subscriber.next(image)
-      subscriber.complete();
-    };
+  image.onload = () => {
+    subscriber.next(image)
+    subscriber.complete();
+  };
 
-    image.onerror = (error) => {
-      subscriber.error( {
-        message: 'Failed to load image',
-        error
-      })
-    };
+  image.onerror = (error) => {
+    subscriber.error( {
+      message: 'Failed to load image',
+      error
+    })
+  };
 
-    image.src = `${URL}/${selectedImage.category}?index=${selectedImage.index}/`;
+  image.src = `${URL}/${selectedImage.category}?index=${selectedImage.index}/`;
 
-    return () => {
-      if(!image.complete) { image.src = ''; }
-      image.onload = undefined;
-      image.onerror = undefined;
+  return () => {
+    if(!image.complete) { image.src = ''; }
+    image.onload = undefined;
+    image.onerror = undefined;
+  }
+})
+
+const online$ = fromEvent(window, 'online');
+
+const cacheImages = (): OperatorFunction<HTMLImageElement> => {
+  const cache: Map<string, Map<number, HTMLImageElement>> = new Map();
+  return switchMap((selectedImage: ISelectedImage): Observable<HTMLImageElement> => {
+    const cacheCategory = cache.get(selectedImage.category);
+    if (cacheCategory) {
+      if ( cacheCategory.has( selectedImage.index ) ) {
+        return of( cacheCategory.get( selectedImage.index ) );
+      }
+    } else {
+      cache.set(selectedImage.category, new Map())
     }
-  })),
+
+    return loadImage(selectedImage).pipe(
+      tap((image: HTMLImageElement) => {
+        cache.get(selectedImage.category).set(selectedImage.index, image);
+      })
+    );
+  })
+}
+
+imageSelect$.pipe(
+  tap(() => clearContent()),
+  tap(() => setLoading(true)),
+  cacheImages(),
   tap(() => setLoading(false)),
-  catchError( () => EMPTY),
-).subscribe((image: HTMLImageElement) => {
-  setContent(image);
+  catchError( (err, observable) => {
+    return EMPTY;
+  }),
+).subscribe({
+  next: (image: HTMLImageElement) => setContent( image ),
+  error: err => console.error(err),
+  complete: () => console.log('complete')
 })
 
 
