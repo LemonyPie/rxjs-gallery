@@ -17,4 +17,4 @@ Also this gallery prefetches one image forwards (using `concat` operator to avoi
 ## Known issues
 
 * Loaded images cache needs to be cleaned after at least category change or in better case to store closest 2 images on left and right from current image
-* Images can be prefetched backwards
+* Images can't be prefetched backwards
