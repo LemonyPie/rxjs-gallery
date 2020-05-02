@@ -146,7 +146,7 @@ const loadAndCacheImages = (prefetch?: number): OperatorFunction<HTMLImageElemen
           ));
         }
 
-        return EMPTY;
+        return of(image);
       })
       : identity
   );
