@@ -108,7 +108,7 @@ const prefetchMap = (innerObservable, project) => {
   )
 }
 
-const loadAndCacheImages = (prefetch?: number): OperatorFunction<HTMLImageElement> => {
+const loadAndCacheImages = (prefetchNumber?: number): OperatorFunction<HTMLImageElement> => {
   const cache: Map<string, Map<number, HTMLImageElement>> = new Map();
   return (source: Observable<ISelectedImage>): Observable<HTMLImageElement> => source.pipe(
     switchMap((selectedImage: ISelectedImage): Observable<HTMLImageElement> => {
@@ -132,18 +132,26 @@ const loadAndCacheImages = (prefetch?: number): OperatorFunction<HTMLImageElemen
         }),
       );
     }),
-    prefetch
+    prefetchNumber
       ? prefetchMap(source, ([image, selectedImage]: [HTMLImageElement, ISelectedImage]) => {
         const cacheCategory = cache.get(selectedImage.category);
-        const prefetchIndex = selectedImage.index + prefetch;
-        if(!cacheCategory.has(prefetchIndex)) {
-          return concat(of(image), loadImage({...selectedImage, index: prefetchIndex}).pipe(
-            tap((image: HTMLImageElement) => {
-              cacheCategory.set(prefetchIndex, image)
-            }),
-            flatMap(() => EMPTY),
-            catchError(() => EMPTY)
-          ));
+        const prefetchList: Observable<HTMLImageElement>[] = [];
+        for(let i = selectedImage.index + 1; i <= selectedImage.index + prefetchNumber; i++) {
+          const prefetchIndex = i;
+          if(!cacheCategory.has(prefetchIndex)) {
+            prefetchList.push(
+              loadImage({...selectedImage, index: prefetchIndex}).pipe(
+                tap((image: HTMLImageElement) => {
+                  cacheCategory.set(prefetchIndex, image)
+                }),
+                flatMap(() => EMPTY),
+                catchError(() => EMPTY)
+              )
+            )
+          }
+        }
+        if(prefetchList.length > 0) {
+          return concat(of(image), ...prefetchList);
         }
 
         return of(image);
@@ -155,7 +163,7 @@ const loadAndCacheImages = (prefetch?: number): OperatorFunction<HTMLImageElemen
 imageSelect$.pipe(
   tap(() => clearContent()),
   tap(() => setLoading(true)),
-  loadAndCacheImages(1),
+  loadAndCacheImages(2),
   tap(() => setLoading(false))
 ).subscribe({
   next: (image: HTMLImageElement) => setContent( image ),
